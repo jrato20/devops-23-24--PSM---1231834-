@@ -63,7 +63,7 @@ public class Employee {
 		if (jobYears < 0) {
 			return false;
 		}
-		if (email==null || email.isEmpty()){
+		if (email==null || email.isEmpty() || !email.contains("@")){
 			return false;
 		}
 
