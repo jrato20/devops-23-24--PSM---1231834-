@@ -171,5 +171,10 @@ class EmployeeTest {
         assertThrows(IllegalArgumentException.class, () -> new Employee("Joni", "Mouse", "BigRat", 1000, null));
 
     }
+
+    @Test
+    void EmailInvalid() {
+        assertThrows(IllegalArgumentException.class, () -> new Employee("Daenerys", "Targaryen", "Khaleesi", 10, "elizabeth_darcygmail.com"));
+    }
 }
 
