@@ -20,12 +20,11 @@ git init
 git add README.md
 git commit -m "first commit"
 git branch -M main
-git remote add origin git@github.com:username/repository-name.git
+git remote add origin git@github.com:username/devops-23-24--PSM---1231834-.git
 git push -u origin main
 ```
 The .gitignore file should be created to avoid the inclusion of unnecessary files in the repository. The following command can be used to create the file.
 On the given website the .gitignore file content can be copied and pasted to the file using the nano command.
-I recommend to add the .idea directory to the .gitignore file.
 
 ```bash  
 touch .gitignore
