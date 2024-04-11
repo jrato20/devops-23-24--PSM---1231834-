@@ -36,4 +36,11 @@ frontend {
 	checkScript = "run check"
 }
 
+task copyJar(type: Copy){
+	dependsOn build
 
+	from "$buildDir/libs"
+	into "$projectDir/dist"
+
+	include '**/*.jar'
+}
