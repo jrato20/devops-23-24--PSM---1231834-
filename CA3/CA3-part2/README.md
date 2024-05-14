@@ -1,257 +1,254 @@
-# Technical Report for CA3 Part 1: Virtualization with Vagrant
+# Technical Report: Setting up Virtual Environment with Vagrant
+# Overview
 
-## Introduction
+In Part 2, a virtual environment was setted up using Vagrant to execute a Spring Boot application (gradle "basic" version), focusing on virtualization with Vagrant.
 
+## Vagrant Analysis
+Vagrant defines virtual environments as code using a simple, reproducible configuration file called a Vagrantfile. 
+It supports multiple virtualization and cloud providers such as VirtualBox, VMware, Hyper-V, and Docker. Vagrant includes built-in support for provisioning tools like shell scripts, enabling automated software setup. These environments can be version-controlled with Git, facilitating efficient team collaboration and ensuring consistent environments across different development machines, mitigating issues where software behaves differently across systems.
 
-In the dynamic realm of software engineering, establishing and maintaining consistent development environments is paramount. Virtualization presents a robust solution, enabling developers to simulate various operating systems on a single hardware platform, thereby enhancing control over a range of development scenarios. This segment of Assignment 3 (CA3) centers on harnessing virtualization capabilities utilizing VirtualBox and Vagrant, tailored specifically for students employing either conventional PCs or Apple devices with ARM64 architecture.
-
-The principal aim of this task is to employ virtualization techniques to transfer and execute existing projects from preceding assignments within a virtualized Ubuntu environment. This configuration will replicate the development environment uniformly across diverse systems, ensuring that all features and dependencies are managed consistently and isolated from the host systems.
-
-This document endeavors to outline the procedures involved in establishing the virtual machine (VM), configuring essential development tools, and executing two distinct projects: a Spring Boot tutorial and a Gradle demonstration. By providing comprehensive steps and elucidative explanations, this report serves as a thorough guide, enabling future students to replicate the setup and comprehend the pragmatic implications of virtualization in software development workflows.
-
-
-### Creating the Virtual Machine
-
-#### 1. **Download and Install VirtualBox or UTM**: Start by downloading VirtualBox from [Oracle's website](https://www.virtualbox.org/).
-
-#### 2. **Setting Up a New VM**:
-
-- Launch VirtualBox/UTM and select "New" to begin crafting a fresh virtual machine.
-
-- Provide a name for your VM (e.g., "UbuntuDev") and opt for "Linux" as the operating system type and "Ubuntu (64-bit)" as the version.
-
-- Assign memory (RAM): It's advisable to allocate a minimum of 2048 MB for satisfactory performance.
-
-- Generate a virtual hard disk: Choose VDI (VirtualBox Disk Image) and allocate at least 10 GB of storage space. Opt for dynamic allocation for the storage on the physical hard disk.
+## VirtualBox Analysis
+VirtualBox, available for Windows, macOS, Linux, and Solaris, provides consistent virtualization across various operating systems. It includes guest additions that improve virtual machine performance and host integration, such as shared folders, clipboard sharing, and dynamic screen resizing. VirtualBox offers flexible networking options, including NAT, bridged, host-only, and internal networking. Additionally, it provides a robust API and SDK for automation, integration with third-party tools, and virtual machine customization.
 
 
-#### 3. **Install Ubuntu on the Virtual Machine**:
+### Part 1: Initial Setup
+Study Vagrantfile  in "https://bitbucket.org/pssmatos/vagrant-multi-spring-tut-demo/".
+- "web" for running Tomcat and the Spring Boot application;
+- "db" for executing the H2 server database.
 
-- Fetch the Ubuntu Server ISO file from the [Ubuntu's official site](https://ubuntu.com/download/server).
+### Part 2: Copying Vagrantfile to Your Repository
+Create a directory "CA3/CA3-Part2".
 
-- Attach the ISO file to your VM: In VirtualBox, pick your VM, access "Settings," navigate to "Storage," select "Empty" under Controller: IDE, then hit the disk icon beside "Optical Drive" and pick "Choose a disk file..." Find and pick your downloaded ISO file.
+```bash
+cd path/to/directory/
+mkdir CA3/CA3-Part2
+```
+Copy the Vagrantfile from the cloned repository to "CA3/CA3-Part2" directory in your repository.
 
-- Launch the VM and adhere to the prompts on the screen to initiate the Ubuntu installation process. While installing, opt for the standard server utilities and, if requested, install the OpenSSH server for remote access.
+```bash
+cd /CA3/CA3-Part2/
+git clone <repository_URL>
+```
 
-#### 4. **Virtualization and Networking Setup**:
-4.1 **Create a Host-Only Network**:
-- Open your VM application (e.g., VirtualBox).
-- Navigate to the **Host Network Manager**.
-- Click on **Create** to add a new host-only network.
-- Name and configure this network within my VM's network settings.
+### Part 3: Updating Vagrantfile Configuration
+Open the Vagrantfile in your repository.
+Update the configuration to use your own Gradle version of the Spring Boot application.
+Ensure that the Vagrantfile reflects the changes necessary to use the H2 server in the "db" VM.
 
-4.2 **Setup Networking for the VM**:
-- In your VM's settings, set **Network Adapter 2** to be a **Host-only Adapter**.
-- Check the IP range for the host-only network (e.g., `192.168.56.1/24`).
-- Assign an appropriate IP from this range to the adapter, such as `192.168.59.3`.
+**Vagrantfile:**
 
-#### 5. Initial VM Setup
-- Start your VM and log in.
-- Update package repositories:
-  ```bash
-  sudo apt update
-  ```
-- Install necessary network tools:
-  ```bash
-  sudo apt install net-tools
-  ```
-- Configure the network interface by editing the Netplan configuration file:
-  ```bash
-  sudo nano /etc/netplan/01-netcfg.yaml
-  ```
+```
+# See: https://manski.net/2016/09/vagrant-multi-machine-tutorial/
+# for information about machine names on private network
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/focal64"
 
--This is how the `01-netcfg.yaml`should look like:
+  # This provision is common for both VMs
+  config.vm.provision "shell", inline: <<-SHELL
+    sudo apt-get update -y
+    sudo apt-get install -y iputils-ping avahi-daemon libnss-mdns unzip \
+        openjdk-17-jdk-headless
+    # ifconfig
+  SHELL
 
-    network:
-        version: 2
-        renderer: networkd
-        ethernets:
-            enp0s3:
-                dhcp4: yes
-            enp0s8:
-                addresses:
-                    - 192.168.59.3
+  #============
+  # Configurations specific to the database VM
+  config.vm.define "db" do |db|
+    db.vm.box = "ubuntu/focal64"
+    db.vm.hostname = "db"
+    db.vm.network "private_network", ip: "192.168.56.11"
 
-- Apply the changes with:
-  ```bash
-  sudo netplan apply
-  ```
+    # We want to access H2 console from the host using port 8082
+    # We want to connet to the H2 server using port 9092
+    db.vm.network "forwarded_port", guest: 8082, host: 8082
+    db.vm.network "forwarded_port", guest: 9092, host: 9092
 
-#### 6. Additional Utilities
-- **SSH Setup**:
-   - Install OpenSSH Server:
-     ```bash
-     sudo apt install openssh-server
-     ```
-   - Enable password authentication in the SSH configuration.
-   - Restart SSH service:
-     ```bash
-     sudo systemctl restart ssh
-     ```
+    # We need to download H2
+    db.vm.provision "shell", inline: <<-SHELL
+      wget https://repo1.maven.org/maven2/com/h2database/h2/1.4.200/h2-1.4.200.jar
+    SHELL
 
-- **FTP Setup**:
-   - Install `vsftpd`:
-     ```bash
-     sudo apt install vsftpd
-     ```
-   - Enable write access in the FTP configuration.
-   - Restart FTP service:
-     ```bash
-     sudo systemctl restart vsftpd
-     ```
+    # The following provision shell will run ALWAYS so that we can execute the H2 server process
+    # This could be done in a different way, for instance, setting H2 as as service, like in the following link:
+    # How to setup java as a service in ubuntu: http://www.jcgonzalez.com/ubuntu-16-java-service-wrapper-example
+    #
+    # To connect to H2 use: jdbc:h2:tcp://192.168.33.11:9092/./jpadb
+    db.vm.provision "shell", :run => 'always', inline: <<-SHELL
+      java -cp ./h2*.jar org.h2.tools.Server -web -webAllowOthers -tcp -tcpAllowOthers -ifNotExists > ~/out.txt &
+    SHELL
+  end
 
-#### Software Installation
+  #============
+  # Configurations specific to the webserver VM
+  config.vm.define "web" do |web|
+    web.vm.box = "ubuntu/focal64"
+    web.vm.hostname = "web"
+    web.vm.network "private_network", ip: "192.168.56.10"
 
-Once the Ubuntu server is up and running, proceed with installing the necessary software for your development environment:
+    # We set more ram memory for this VM
+    web.vm.provider "virtualbox" do |v|
+      v.memory = 1024
+    end
 
-7**Update Your System**:
-- Open a terminal and run the following commands to update your system:
-  ``` bash
-  sudo apt update
-  sudo apt upgrade
-  ```
+    # We want to access tomcat from the host using port 8080
+    web.vm.network "forwarded_port", guest: 8080, host: 8080
 
-8**Install Essential Tools**:
-- **Git**: To clone and manage your project repositories.
-  ``` bash
-  sudo apt install git
-  ```
-- **Java Development Kit (JDK)**: Essential for running Java applications.
-  ``` bash
-  sudo apt install openjdk-17-jdk openjdk-17-jre
-  ```
-   - The installed JDK version 17 was installed in order for the projects (namingly, CA2 Part2 built with java 17) to be able to run
+    web.vm.provision "shell", inline: <<-SHELL, privileged: false
+      # sudo apt-get install git -y
+      # sudo apt-get install nodejs -y
+      # sudo apt-get install npm -y
+      # sudo ln -s /usr/bin/nodejs /usr/bin/node
+      sudo apt install -y tomcat9 tomcat9-admin
+      # If you want to access Tomcat admin web page do the following:
+      # Edit /etc/tomcat9/tomcat-users.xml
+      # uncomment tomcat-users and add manager-gui to tomcat user
 
+       # Change the following command to clone your own repository!
+      git clone https://github.com/jrato20/devops-23-24--PSM---1231834-.git
+      cd ~/devops-23-24--PSM---1231834-/CA3/CA3-part2/react-and-spring-data-rest-basic
+      chmod u+x gradlew
+      ./gradlew clean build
+      # To deploy the war file to tomcat9 do the following command:
+      sudo cp ./build/libs/react-and-spring-data-rest-basic-0.0.1-SNAPSHOT.war /var/lib/tomcat9/webapps
+    SHELL
+  end
+end
+```
 
-- **Maven**: For building and managing Java-based projects.
-  ``` bash
-  sudo apt install maven
-  ```
-- **Gradle**: For building and automating Java projects.
-  ```bash
-  wget https://services.gradle.org/distributions/gradle-8.6-bin.zip
-  sudo mkdir /opt/gradle
-  sudo unzip -d /opt/gradle gradle-8.6-bin.zip
-  echo "export GRADLE_HOME=/opt/gradle/gradle-8.6" >> ~/.bashrc
-  echo "export PATH=$GRADLE_HOME/bin:$PATH
-  source ~/.bashrc
-  ```
-   - The version 8.6 was chosen for compatibility purposes with Gradle-built projects
-
-9**Verify Installations**:
-- Ensure all installations are correct by checking the versions of the installed software:
-  ``` bash
-  git --version
-  java -version
-  mvn -version
-  gradle -version
-  ```
-
-Following these steps will prepare your virtual machine with all the necessary tools and configurations to proceed with cloning your repository and running the projects. This setup ensures a standardized development environment that mimics a real-world server setup, providing a robust foundation for further development and learning.
-
-#### Cloning the Repository
-
-1. **Open a Terminal in Your VM**:
-- Access the terminal through your VM's interface. If you are using SSH to connect to the VM, ensure it's set up during the Ubuntu installation.
-
-2. **Clone Your Repository**:
-- Navigate to a directory where you want to store your projects, such as `/home/username/projects`.
-- Use the git command to clone your repository. Replace `<repository-url>` with the URL of your GitHub repository:
-  ``` bash
-  git clone <repository-url>
-  ```
-- Enter your directory containing the projects:
-  ``` bash
-  cd dirctory/holding/projects
-  ```
+- Change the `git clone` command and insert your repository url;
+- Change the `cd ~/devops-23-24--PSM---1231834-/CA3/CA3-part2/react-and-spring-data-rest-basic` command with your repository directory.
 
 
-#### Setting Up the Projects
+### Part 4: Vagrant commands
 
-1.  - Configure Maven Wrapper and Gradle Wrapper to give executing permissions:
-      ```bash
-       chmod +x mvnw
-       chmod +x gradlew
-       ```
-2. **CA1**:
-- Navigate to the project directory:
-  ``` bash
-  cd directory/with/spring-boot-tutorial-basic
-  ```
-- Build the project using Maven:
-  ``` bash
-  ./mvnw clean install
-  ```
-- Run the project:
-  ``` bash
-  ./mvnw spring-boot:run
-  ```
-- Check that the application is running correctly by accessing it from your host machine’s web browser using the VM’s IP address and the port configured in the project.
+Use `vagrant up` command to run vagrantfile.
+Open your browser and write http://<your ip>:<port> (example: 192.168.56.10:8080).
 
-   ``` bash
-    ip addr
-   ```
-- put the IP and the port 8080 on the browser address.
+If you need to update your vagrantfile and rerun it again, you'll need to use "vagrant destroy" the VMs created previously.
 
+```bash
+# remove db VM
+vagrant destroy db
 
-3. **CA2 Part1**:
-- Navigate to the Gradle project directory:
-  ``` bash
-  cd directory/holding/gradle_basic_demo
-  ```
-- Before building, ensure all Gradle dependencies are set up properly. Since some functionalities might not work due to the lack of a desktop environment, adjust the `build.gradle` if necessary.
+#remove web VM
+vagrant destroy web
+```
 
-- Build the project using Gradle and run the server:
-  ``` bash
-  ./gradlew build
-  ./gradlew runServer
-  ```
-- Build the project in your computer terminal and run the client:
-  ``` bash
-  gradle runClient --args="192.168.59.3 59001"
-  ```
-- The project should run smoothly
+### Part 5: Committing Changes
+After this, you can commit your Vagrantfile into your repository.
+
+## Conclusions
+- Vagrant and VirtualBox are powerful tools that complement each other by providing a streamlined workflow for creating and managing virtual environments. Vagrant leverages VirtualBox's robust virtualization capabilities to ensure consistent, reproducible environments across different operating systems. By using Vagrant to define configurations as code, developers can automate the setup and provisioning of VirtualBox virtual machines, enhancing productivity and collaboration.
+
+- During the implementation of CA3/CA3-Part2 issues were found when building Spring Data Application with vagrantfile. The first time that build succeded, was after updating vagrantfile with JDK version to 17. Second time running vagrantfile, build failed, and updating aplication.properties (after research) was necessary for the build to succeed.
+
+# Alternative Solution Using VMware
+
+An alternative to VirtualBox is Hyper-V, Microsoft's virtualization solution for running multiple operating systems on a single physical machine. Hyper-V provides a comprehensive set of features for creating and managing virtual machines (VMs).
+
+## Analysis comparing Hyper-V and VirtualBox
+- Features
+
+  - Hyper-V offers advanced features tailored for enterprise environments, including live migration, Hyper-V Replica for disaster recovery, and nested virtualization. 
+  - VirtualBox, while robust, focuses more on essential virtualization features like snapshots, shared folders, and USB device support but lacks some of the advanced capabilities found in Hyper-V.
 
 
+- Performance
+  - Hyper-V typically delivers better performance in Windows-centric environments due to its optimized hypervisor and tight integration with the Windows OS. 
+  - VirtualBox performance can be lower, particularly under heavy workloads, due to its emphasis on ease of use and broad compatibility.
 
-5. **CA2 Part2**:
-- Navigate to the basic folder:
-   ``` bash
-   cd devops-23-24--PSM---1231834-\CA1
-   ```
-- Run with gradle:
-   ``` bash
-   ./gradlew build
-    ./gradlew bootRun
-   ```
-- Check your VM's IP:
-   ```bash
-   ip addr
-   ```
-- Write `localhost:8080` on your browser address. The application should run smoothly.
 
-### Issues
+## Overview
+In this alternative solution, we'll use Hyper-V to create and manage virtual machines for running the Spring Boot application and the H2 database.
 
-- Create ReadMe CA3-Part1 #21
 
-### Conclusion
+### Part 1: Setting Up Hyper-V VMs
 
-After finishing CA3 Part 1, we'll have effectively established a virtual development space using VirtualBox or UTM and transferred two vital projects into this setup. This activity not only deepens our grasp of virtualization tech but also furnishes us with essential abilities in setting up and overseeing independent development spaces. These proficiencies prove invaluable in a professional context where development and testing setups frequently demand close replication of production environments.
+1. Enable Hyper-V
 
-#### Committing Changes to Your Repository
+Ensure Hyper-V is enabled on your Windows machine. You can do this through the Control Panel under "Turn Windows features on or off," selecting Hyper-V, and restarting your computer.
 
-- **Regular Commits**: Make frequent commits to your repository with descriptive commit messages that clearly explain the changes or enhancements made.
-  ```
-  git add .
-  git commit -m "created README.md file"
-  git push origin main
-  ```  
+### Part 2: Creating Vagrantfile for Your Repository
+**Vagrantfile:**
 
-#### Tagging for Release
+```
+Vagrant.configure("2") do |config|
+  # Set the Hyper-V box name
+  config.vm.box = "generic/ubuntu2004"
 
-- **Tagging the Final Submission**: Once you complete your assignment, tag your repository to mark the version of the project that corresponds to your submission.
-  ```
-  git tag -a CA3-PART1 -m "Created CA3 Part 1"
-  git push origin --tags
-  ```
+  # Common provision for both VMs
+  config.vm.provision "shell", inline: <<-SHELL
+    sudo apt-get update -y
+    sudo apt-get install -y iputils-ping avahi-daemon libnss-mdns unzip \
+        openjdk-17-jdk-headless
+  SHELL
+
+  # Configurations specific to the database VM
+  config.vm.define "db" do |db|
+    # Use the Hyper-V provider
+    db.vm.provider "hyperv" do |hyperv|
+      # Specify Hyper-V-specific configurations
+      hyperv.memory = 1024
+      hyperv.cpus = 1
+    end
+
+    db.vm.hostname = "db"
+    db.vm.network "private_network", ip: "192.168.56.11"
+
+    # Port forwarding for H2 console and server
+    db.vm.network "forwarded_port", guest: 8082, host: 8082
+    db.vm.network "forwarded_port", guest: 9092, host: 9092
+
+    # Download H2 database
+    db.vm.provision "shell", inline: <<-SHELL
+      wget https://repo1.maven.org/maven2/com/h2database/h2/1.4.200/h2-1.4.200.jar
+    SHELL
+
+    # Run H2 server process
+    db.vm.provision "shell", :run => 'always', inline: <<-SHELL
+      java -cp ./h2*.jar org.h2.tools.Server -web -webAllowOthers -tcp -tcpAllowOthers -ifNotExists > ~/out.txt &
+    SHELL
+  end
+
+  # Configurations specific to the webserver VM
+  config.vm.define "web" do |web|
+    # Use the Hyper-V provider
+    web.vm.provider "hyperv" do |hyperv|
+      # Specify Hyper-V-specific configurations
+      hyperv.memory = 1024
+      hyperv.cpus = 1
+    end
+
+    web.vm.hostname = "web"
+    web.vm.network "private_network", ip: "192.168.56.10"
+
+    # Port forwarding for Tomcat
+    web.vm.network "forwarded_port", guest: 8080, host: 8080
+
+    web.vm.provision "shell", inline: <<-SHELL, privileged: false
+      sudo apt install -y tomcat9 tomcat9-admin
+
+      # Change the following command to clone your own repository!
+      git clone https://github.com/Beatrizsr96/devops-23-24-PSM-1231824.git
+      cd ~/devops-23-24-PSM-1231824/CA2/Part2/react-and-spring-data-rest-basic
+      chmod +wrx *
+      ./gradlew clean build
+      nohup ./gradlew bootrun > /home/vagrant/spring-boot-app.log 2>&1 &
+    SHELL
+  end
+end
+```
+
+### Part 3: Running Virtual Machines
+
+1. Accessing Applications
+   Access the Spring Boot application by navigating to its IP address or hostname in a web browser. Similarly, access the H2 database console using its IP address and configured port.
+
+### Part 4: Hyper-V Commands
+
+1. Use `vagrant up --provider=hyperv` command to run the Vagrantfile using Hyper-V.
+```
+## Conclusion
+
+By utilizing Hyper-V for virtualization, you can create and manage virtual machines efficiently for running applications and databases. Hyper-V offers a user-friendly interface, robust features, and excellent performance for virtualized environments.
 
