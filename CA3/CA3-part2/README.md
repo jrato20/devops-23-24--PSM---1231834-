@@ -229,8 +229,8 @@ Vagrant.configure("2") do |config|
       sudo apt install -y tomcat9 tomcat9-admin
 
       # Change the following command to clone your own repository!
-      git clone https://github.com/Beatrizsr96/devops-23-24-PSM-1231824.git
-      cd ~/devops-23-24-PSM-1231824/CA2/Part2/react-and-spring-data-rest-basic
+      git clone https://github.com/jrato20/devops-23-24--PSM---1231834-.git
+      cd ~/devops-23-24--PSM---1231834-/CA3/CA3-part2/react-and-spring-data-rest-basic
       chmod +wrx *
       ./gradlew clean build
       nohup ./gradlew bootrun > /home/vagrant/spring-boot-app.log 2>&1 &
