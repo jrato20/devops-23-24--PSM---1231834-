@@ -65,11 +65,11 @@ Vagrant.configure("2") do |config|
 
       # Change the following command to clone your own repository!
       git clone https://github.com/jrato20/devops-23-24--PSM---1231834-.git
-      cd tut-basic-gradle
+      cd C:/Users/Joao Rato/Desktop/SWITCH/Nova pasta/devops-23-24--PSM---1231834-/CA3/CA3-part2
       chmod u+x gradlew
       ./gradlew clean build
       # To deploy the war file to tomcat9 do the following command:
-      sudo cp ./build/libs/basic-0.0.1-SNAPSHOT.war /var/lib/tomcat9/webapps
+      sudo cp ./build/libs/react-and-spring-data-rest-basic-0.0.1-SNAPSHOT.war /var/lib/tomcat9/webapps
     SHELL
   end
 end
